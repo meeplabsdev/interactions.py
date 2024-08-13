@@ -115,7 +115,6 @@ line-length = 120
 target-version = "py310"
 ignore-init-module-imports = true
 task-tags = ["TODO", "FIXME", "XXX", "HACK", "REVIEW", "NOTE"]
-show-source = false # set to true if you want to see the source of the error/warning
 select = ["E", "F", "B", "Q", "RUF", "D", "ANN", "RET", "C"]
 ignore = [
     "Q0",

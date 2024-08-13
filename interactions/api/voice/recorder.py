@@ -2,21 +2,20 @@ import asyncio
 import io
 import logging
 import os
+import select
 import shutil
 import struct
 import threading
 import time
 from asyncio import AbstractEventLoop
 from collections import defaultdict
-from typing import TYPE_CHECKING
-
-import select
+from typing import TYPE_CHECKING, Callable
 
 from interactions.api.voice.audio import RawInputAudio
 from interactions.api.voice.audio_writer import AudioWriter
 from interactions.api.voice.encryption import Decryption
 from interactions.api.voice.opus import Decoder
-from interactions.client.const import logger_name, Missing
+from interactions.client.const import Missing, logger_name
 from interactions.client.utils.input_utils import unpack_helper
 from interactions.models.discord.snowflake import Snowflake_Type, to_snowflake_list
 
@@ -51,6 +50,8 @@ class Recorder(threading.Thread):
         self.start_time = 0
         self.user_timestamps = {}
         self.recording_whitelist: list[Snowflake_Type] = []
+
+        self.stream_callback: Callable[[bytes, Snowflake_Type], None] | None = None
 
         if not shutil.which("ffmpeg"):
             raise RuntimeError(
@@ -199,6 +200,10 @@ class Recorder(threading.Thread):
                 except Exception as ex:
                     log.error("Error while recording: %s", ex)
 
+    def set_stream_callback(self, callback: Callable[[bytes, Snowflake_Type], None]) -> None:
+        """Set a callback function to receive real-time audio data."""
+        self.stream_callback = callback
+
     def process_data(self, raw_audio: RawInputAudio) -> None:
         """
         Processes incoming audio data and writes it to the corresponding buffer.
@@ -235,3 +240,6 @@ class Recorder(threading.Thread):
         raw_audio.pcm = struct.pack("<h", 0) * int(silence * decoder.sample_rate) * 2 + raw_audio.decoded
 
         self.audio.write(raw_audio, raw_audio.user_id)
+
+        if self.stream_callback:
+            self.stream_callback(raw_audio.pcm, raw_audio.user_id)
