@@ -242,4 +242,4 @@ class Recorder(threading.Thread):
         self.audio.write(raw_audio, raw_audio.user_id)
 
         if self.stream_callback:
-            self.stream_callback(raw_audio.pcm, raw_audio.user_id)
+            self.loop.create_task(self.stream_callback(raw_audio.pcm, raw_audio.user_id))
